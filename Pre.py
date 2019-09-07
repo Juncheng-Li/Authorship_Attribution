@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import csv
 import time
 import nltk
@@ -6,6 +7,8 @@ from nltk import TweetTokenizer
 from nltk.corpus import stopwords
 from nltk import tokenize
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+from keras.utils import to_categorical
 import tldextract
 nltk.download('stopwords')
 
@@ -42,18 +45,31 @@ def clean_raw_data(sentence):
 
 df = pd.read_csv(r'./whodunnit/train_tweets.txt', names=['label', 'sentence'], sep='\t', quoting=csv.QUOTE_NONE)
 df_test = pd.read_csv(r'./whodunnit/test_tweets_unlabeled.txt', names=['label', 'sentence'], sep='\t', quoting=csv.QUOTE_NONE)
-
+print(df.sentence.shape[0])
 tt = TweetTokenizer()
-# for n in range(len(df.sentence)):
-#     cleaned_tokens = clean_raw_data(df.sentence[n])
-#     cleaned = " ".join(cleaned_tokens)
-#     df.loc[n, 'sentence'] = cleaned
 
-tic = time.clock()
-print(df)
-df['sentence'] = df['sentence'].apply(clean_raw_data)
-print(df)
-toc = time.clock()
+# tic = time.clock()
+# print(df)
+# df['sentence'] = df['sentence'].apply(clean_raw_data)
+# print(df)
+# toc = time.clock()
+# print("time processed: ")
+# print(toc - tic)
 
-print("time processed: ")
-print(toc - tic)
+# Label processing
+y_train = df['label']
+print(y_train)
+labelencoder = LabelEncoder()
+labelencoder.fit(y_train)
+num_classes = len(labelencoder.classes_)
+print("num_classes:  " + str(num_classes))
+y_train = labelencoder.transform(y_train)
+print(y_train)
+y_train = to_categorical(y_train)
+print(y_train)
+
+# Reverse Label encoding
+y_train = np.argmax(y_train, axis=1)
+print(y_train)
+y_train = labelencoder.inverse_transform(y_train)
+print(y_train)
