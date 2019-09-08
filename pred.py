@@ -15,16 +15,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import tldextract
 
+
 def clean_raw_data(sentence):
     tmp = tt.tokenize(sentence)
     # Convert url to domain
-    if 'http' in tmp:
+    if 'http://' in sentence:
         for i in range(len(tmp)):
-            if 'http' in tmp[i]:
+            if 'http://' in tmp[i]:
                 tmp[i] = tldextract.extract(tmp[i]).domain
 
     # Remove @handle
-    if '@handle' in tmp:
+    if '@handle' in sentence:
         count = 0
         for i in range(len(tmp)):
             if tmp[i] == '@handle':
@@ -55,6 +56,7 @@ batch_size = 128
 df = pd.read_csv(r'./whodunnit/train_tweets.txt', names=['label', 'sentence'], sep='\t', quoting=csv.QUOTE_NONE)
 df_test = pd.read_csv(r'./whodunnit/test_tweets_unlabeled.txt', names=['sentence'], sep='\t',
                       quoting=csv.QUOTE_NONE)
+print(df_test['sentence'].shape)
 
 # Clean data
 tt = TweetTokenizer()
@@ -66,7 +68,6 @@ print(df)
 tokenizer = Tokenizer(num_words=num_words, filters='"#$%&()*+,-./:<=>?@\^_`|', lower=True)
 tokenizer.fit_on_texts(df['sentence'].values)
 word_index = tokenizer.word_index
-print('Found %s unique tokens.' % len(word_index))
 x_train = tokenizer.texts_to_sequences(df['sentence'].values)
 x_train = pad_sequences(x_train, maxlen=sequence_length)
 print(x_train.shape)
@@ -80,21 +81,25 @@ print("num_classes:  " + str(num_classes))
 y_train = labelencoder.transform(y_train)
 y_train = to_categorical(y_train)
 
-
-# Predict feature extraction
+# Prepare predict data
 df_test['sentence'] = df_test['sentence'].apply(clean_raw_data)
-x_unlabel = tokenizer.texts_to_sequences(df_test['sentence'].values)
-x_unlabel = pad_sequences(x_unlabel, maxlen=sequence_length)
+print(df_test['sentence'].shape)
+x_submit = tokenizer.texts_to_sequences(df_test['sentence'].values)
+x_submit = pad_sequences(x_submit, maxlen=sequence_length)
 
+# Predict
 print("Loading Model...")
 model = load_model(r'./keras-lstm.h5')
 print("Predicting unlabelled data...")
-predictions = model.predict(x_unlabel)
+predictions = model.predict(x_submit)
 print(predictions)
 predictions = np.argmax(predictions, axis=1)
 print(predictions)
 predictions = labelencoder.inverse_transform(predictions)
 print(predictions)
-df_predictions = pd.DataFrame(predictions)
-df_predictions = pd.concat([df_predictions, df_test], axis=1)
-df_predictions.to_csv(r'LSTM_predictions.txt', sep='\t', index=False, header=False)
+
+# Save predictions
+df_predictions = pd.DataFrame(predictions, columns=['Predicted'])
+df_index = pd.DataFrame(list(range(1, len(predictions)+1)), columns=['Id'])
+df_predictions = pd.concat([df_index, df_predictions], axis=1)
+df_predictions.to_csv(r'LSTM_predictions.csv', sep=',', index=False)
