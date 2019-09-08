@@ -47,8 +47,8 @@ def clean_raw_data(sentence):
 
 
 # Parameters
-num_words = 50000
-sequence_length = 250
+num_words = 65000
+sequence_length = 45
 epochs = 100
 batch_size = 128
 
@@ -64,18 +64,13 @@ df['sentence'] = df['sentence'].apply(clean_raw_data)
 print(df)
 
 # Feature extraction
-tokenizer = Tokenizer(num_words=num_words, filters='"#$%&()*+,-./:<=>?@\^_`|', lower=True)
+tokenizer = Tokenizer(num_words=num_words, filters='()<>[]*+=-,.?@`^|\/)', lower=True)
 tokenizer.fit_on_texts(df['sentence'].values)
 word_index = tokenizer.word_index
 print('Found %s unique tokens.' % len(word_index))
 x_train = tokenizer.texts_to_sequences(df['sentence'].values)
 x_train = pad_sequences(x_train, maxlen=sequence_length)
 print(x_train.shape)
-
-
-# y_train = pd.get_dummies(df['label']).values
-# print(y_train)
-# print('label shape:', y_train.shape)
 
 # Label encoding and convert on one-hot
 y_train = df['label']
@@ -98,13 +93,13 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 print(model.summary())
 
 history = model.fit(x_train, y_train,
-                    epochs=epochs,
                     batch_size=batch_size,
+                    epochs=epochs,
                     validation_data=(x_test, y_test),
-                    callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
+                    callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.001)])
 
 # Evaluation
-model.save(r'keras-lstm.h5')
+model.save(r'lstm.h5')
 
 # Prepare predict data
 df_test['sentence'] = df_test['sentence'].apply(clean_raw_data)
@@ -115,11 +110,8 @@ x_submit = pad_sequences(x_submit, maxlen=sequence_length)
 # Predict
 print("Predicting unlabelled data...")
 predictions = model.predict(x_submit)
-print(predictions)
 predictions = np.argmax(predictions, axis=1)
-print(predictions)
 predictions = labelencoder.inverse_transform(predictions)
-print(predictions)
 
 # Save predictions
 df_predictions = pd.DataFrame(predictions, columns=['Predicted'])
