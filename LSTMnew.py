@@ -13,6 +13,7 @@ from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import tldextract
+import matplotlib.pyplot as plt
 nltk.download('stopwords')
 
 
@@ -34,23 +35,23 @@ def clean_raw_data(sentence):
             tmp.remove('@handle')
 
     # Remove stop words
-    stop_words = stopwords.words('english')
-    index = []
-    for i in range(len(tmp)):
-        if tmp[i] in stop_words:
-            index.append(tmp[i])
-    for element in index:
-        tmp.remove(element)
+    # stop_words = stopwords.words('english')
+    # index = []
+    # for i in range(len(tmp)):
+    #     if tmp[i] in stop_words:
+    #         index.append(tmp[i])
+    # for element in index:
+    #     tmp.remove(element)
 
     cleaned_sentence = " ".join(tmp)
     return cleaned_sentence
 
 
 # Parameters
-num_words = 65000
-sequence_length = 45
-epochs = 100
-batch_size = 128
+num_words = 70000
+sequence_length = 40
+epochs = 40
+batch_size = 256
 
 # Load data
 df = pd.read_csv(r'./whodunnit/train_tweets.txt', names=['label', 'sentence'], sep='\t', quoting=csv.QUOTE_NONE)
@@ -81,12 +82,12 @@ print("num_classes:  " + str(num_classes))
 y_train = labelencoder.transform(y_train)
 y_train = to_categorical(y_train)
 
-x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.1, random_state=42)
 
 # Construct LSTM and start training
 model = Sequential()
-model.add(Embedding(num_words, 100, input_length=sequence_length))
-model.add(SpatialDropout1D(0.2))
+model.add(Embedding(num_words, 128, input_length=sequence_length))
+model.add(SpatialDropout1D(0.3))
 model.add(LSTM(100, dropout=0.3, recurrent_dropout=0.3))
 model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -95,10 +96,11 @@ print(model.summary())
 history = model.fit(x_train, y_train,
                     batch_size=batch_size,
                     epochs=epochs,
-                    validation_data=(x_test, y_test),
-                    callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.001)])
+                    shuffle=True,
+                    validation_data=(x_test, y_test))
+                    #callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.001)])
 
-# Evaluation
+# Save model
 model.save(r'lstm.h5')
 
 # Prepare predict data
@@ -118,3 +120,20 @@ df_predictions = pd.DataFrame(predictions, columns=['Predicted'])
 df_index = pd.DataFrame(list(range(1, len(predictions)+1)), columns=['Id'])
 df_predictions = pd.concat([df_index, df_predictions], axis=1)
 df_predictions.to_csv(r'LSTM_predictions.csv', sep=',', index=False)
+
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
