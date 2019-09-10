@@ -48,9 +48,9 @@ def clean_raw_data(sentence):
 
 
 # Parameters
-num_words = 70000
+num_words = 170000
 sequence_length = 40
-epochs = 40
+epochs = 75
 batch_size = 256
 
 # Load data
@@ -121,19 +121,27 @@ df_index = pd.DataFrame(list(range(1, len(predictions)+1)), columns=['Id'])
 df_predictions = pd.concat([df_index, df_predictions], axis=1)
 df_predictions.to_csv(r'LSTM_predictions.csv', sep=',', index=False)
 
+df_acc = pd.DataFrame(history.history['acc'], columns=['acc'])
+df_val_acc = pd.DataFrame(history.history['val_acc'], columns=['val_acc'])
+df_loss = pd.DataFrame(history.history['loss'], columns=['loss'])
+df_val_loss = pd.DataFrame(history.history['val_loss'], columns=['val_loss'])
+df_acc_loss = pd.concat([df_acc, df_val_acc, df_loss, df_val_loss], axis=1)
+df_acc_loss.to_csv(r'LSTM_acc_loss.csv', sep=',', index=False)
 # summarize history for accuracy
 plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
-plt.title('model accuracy')
+plt.title('LSTM model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
+plt.savefig(r'LSTM_model_accuracy')
 # summarize history for loss
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
-plt.title('model loss')
+plt.title('LSTM model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
+plt.savefig(r'LSTM_model_loss')
