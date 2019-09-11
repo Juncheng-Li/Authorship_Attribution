@@ -48,7 +48,7 @@ def clean_raw_data(sentence):
 
 
 # Parameters
-num_words = 170000
+num_words = 80000
 sequence_length = 40
 epochs = 75
 batch_size = 256
@@ -82,7 +82,7 @@ print("num_classes:  " + str(num_classes))
 y_train = labelencoder.transform(y_train)
 y_train = to_categorical(y_train)
 
-x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.1, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.05, random_state=42)
 
 # Construct LSTM and start training
 model = Sequential()
@@ -94,17 +94,17 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 print(model.summary())
 
 history = model.fit(x_train, y_train,
-                    batch_size=batch_size,
                     epochs=epochs,
+                    batch_size=batch_size,
                     shuffle=True,
                     validation_data=(x_test, y_test))
-                    #callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.001)])
+                    #callbacks=[EarlyStopping(monitor='val_loss', patience=15, min_delta=0.001)])
 
 # Save model
 model.save(r'lstm.h5')
 
 # Prepare predict data
-df_test['sentence'] = df_test['sentence'].apply(clean_raw_data)
+#df_test['sentence'] = df_test['sentence'].apply(clean_raw_data)
 print(df_test['sentence'].shape)
 x_submit = tokenizer.texts_to_sequences(df_test['sentence'].values)
 x_submit = pad_sequences(x_submit, maxlen=sequence_length)
@@ -121,12 +121,14 @@ df_index = pd.DataFrame(list(range(1, len(predictions)+1)), columns=['Id'])
 df_predictions = pd.concat([df_index, df_predictions], axis=1)
 df_predictions.to_csv(r'LSTM_predictions.csv', sep=',', index=False)
 
+# Save training history
 df_acc = pd.DataFrame(history.history['acc'], columns=['acc'])
 df_val_acc = pd.DataFrame(history.history['val_acc'], columns=['val_acc'])
 df_loss = pd.DataFrame(history.history['loss'], columns=['loss'])
 df_val_loss = pd.DataFrame(history.history['val_loss'], columns=['val_loss'])
 df_acc_loss = pd.concat([df_acc, df_val_acc, df_loss, df_val_loss], axis=1)
 df_acc_loss.to_csv(r'LSTM_acc_loss.csv', sep=',', index=False)
+
 # summarize history for accuracy
 plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
